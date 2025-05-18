@@ -1,0 +1,197 @@
+import pandas as pd
+
+try:
+    df = pd.read_csv('boston.csv')
+    display(df.head())
+    print(df.shape)
+except FileNotFoundError:
+    print("Error: 'boston.csv' not found. Please ensure the file exists in the current directory.")
+except pd.errors.ParserError:
+    print("Error: Could not parse the CSV file. Please check the file format.")
+except Exception as e:
+    print(f"An unexpected error occurred: {e}")
+# Data Overview
+display(df.head())
+print(df.dtypes)
+
+# Descriptive Statistics
+display(df.describe())
+
+# Missing Values
+print(df.isnull().sum())
+
+# Data Distribution (Histograms)
+import matplotlib.pyplot as plt
+df.hist(bins=30, figsize=(20, 15))
+plt.suptitle('Histograms of Numerical Features', fontsize=16)
+plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+plt.show()
+
+# Correlation Matrix (Heatmap)
+import seaborn as sns
+plt.figure(figsize=(12, 10))
+correlation_matrix = df.corr()
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
+plt.title('Correlation Matrix of Numerical Features')
+plt.show()
+import matplotlib.pyplot as plt
+
+# Feature Relationships (Scatter Plots)
+for col in df.columns:
+    if col != 'MEDV':
+        plt.figure(figsize=(8, 6))
+        plt.scatter(df[col], df['MEDV'], alpha=0.5)
+        plt.title(f'Relationship between {col} and MEDV')
+        plt.xlabel(col)
+        plt.ylabel('MEDV')
+        plt.show()
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Winsorize 'CRIM'
+df['CRIM'] = np.clip(df['CRIM'], a_min=df['CRIM'].quantile(0.05), a_max=df['CRIM'].quantile(0.95))
+
+# Winsorize 'LSTAT'
+df['LSTAT'] = np.clip(df['LSTAT'], a_min=df['LSTAT'].quantile(0.05), a_max=df['LSTAT'].quantile(0.95))
+
+
+# Re-visualize distributions after winsorizing
+df.hist(bins=30, figsize=(20, 15))
+plt.suptitle('Histograms of Numerical Features After Winsorizing', fontsize=16)
+plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+plt.show()
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+# 1. Separate features (X) and target variable (y)
+X = df.drop('MEDV', axis=1)
+y = df['MEDV']
+
+# 2. Identify numerical features
+numerical_features = X.select_dtypes(include=['number']).columns
+
+# 3. Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# 4 & 5. Scale numerical features and replace original numerical features
+scaler = StandardScaler()
+X_train_scaled = X_train.copy()
+X_test_scaled = X_test.copy()
+
+X_train_scaled[numerical_features] = scaler.fit_transform(X_train[numerical_features])
+X_test_scaled[numerical_features] = scaler.transform(X_test[numerical_features])
+
+display(X_train_scaled.head())
+display(X_test_scaled.head())
+from sklearn.linear_model import LinearRegression
+
+# Initialize the model
+model = LinearRegression()
+
+# Train the model
+model.fit(X_train_scaled, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test_scaled)
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+import numpy as np
+
+# Calculate evaluation metrics
+r2 = r2_score(y_test, y_pred)
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+mae = mean_absolute_error(y_test, y_pred)
+
+# Print the metrics
+print(f"R-squared: {r2:.2f}")
+print(f"RMSE: {rmse:.2f}")
+print(f"MAE: {mae:.2f}")
+from sklearn.linear_model import Ridge, Lasso
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+import numpy as np
+
+# Initialize models
+ridge_model = Ridge()
+lasso_model = Lasso()
+rf_model = RandomForestRegressor()
+
+# Train models
+ridge_model.fit(X_train_scaled, y_train)
+lasso_model.fit(X_train_scaled, y_train)
+rf_model.fit(X_train_scaled, y_train)
+
+# Make predictions
+ridge_pred = ridge_model.predict(X_test_scaled)
+lasso_pred = lasso_model.predict(X_test_scaled)
+rf_pred = rf_model.predict(X_test_scaled)
+
+def evaluate_model(y_true, y_pred):
+    r2 = r2_score(y_true, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    mae = mean_absolute_error(y_true, y_pred)
+    return r2, rmse, mae
+
+# Evaluate models
+ridge_r2, ridge_rmse, ridge_mae = evaluate_model(y_test, ridge_pred)
+lasso_r2, lasso_rmse, lasso_mae = evaluate_model(y_test, lasso_pred)
+rf_r2, rf_rmse, rf_mae = evaluate_model(y_test, rf_pred)
+
+print("Ridge Regression:")
+print(f"R-squared: {ridge_r2:.2f}")
+print(f"RMSE: {ridge_rmse:.2f}")
+print(f"MAE: {ridge_mae:.2f}")
+
+print("\nLasso Regression:")
+print(f"R-squared: {lasso_r2:.2f}")
+print(f"RMSE: {lasso_rmse:.2f}")
+print(f"MAE: {lasso_mae:.2f}")
+
+print("\nRandom Forest Regressor:")
+print(f"R-squared: {rf_r2:.2f}")
+print(f"RMSE: {rf_rmse:.2f}")
+print(f"MAE: {rf_mae:.2f}")
+
+# Compare and select the best model
+results = {
+    'Linear Regression': (r2, rmse, mae),
+    'Ridge': (ridge_r2, ridge_rmse, ridge_mae),
+    'Lasso': (lasso_r2, lasso_rmse, lasso_mae),
+    'Random Forest': (rf_r2, rf_rmse, rf_mae),
+}
+
+best_model_name = None
+best_r2 = -1
+for model_name, (r2, rmse, mae) in results.items():
+    if r2 > best_r2:
+        best_r2 = r2
+        best_model_name = model_name
+print(f"\nBest model: {best_model_name}")
+
+if best_model_name == "Random Forest":
+    # Example hyperparameter tuning (RandomizedSearchCV)
+    from sklearn.model_selection import RandomizedSearchCV
+    param_distributions = {
+        'n_estimators': [50, 100, 200],  # Number of trees
+        'max_depth': [None, 10, 20],  # Maximum depth of trees
+        'min_samples_split': [2, 5, 10]  # Minimum samples required to split an internal node
+    }
+    random_search = RandomizedSearchCV(rf_model, param_distributions, n_iter=5, cv=2, scoring='neg_mean_squared_error', random_state=42, n_jobs=-1)
+    random_search.fit(X_train_scaled, y_train)
+    best_rf_model = random_search.best_estimator_
+    print("Tuned Random Forest:")
+    print(f"Best hyperparameters: {random_search.best_params_}")
+    best_rf_pred = best_rf_model.predict(X_test_scaled)
+    best_rf_r2, best_rf_rmse, best_rf_mae = evaluate_model(y_test, best_rf_pred)
+    print(f"R-squared: {best_rf_r2:.2f}")
+    print(f"RMSE: {best_rf_rmse:.2f}")
+    print(f"MAE: {best_rf_mae:.2f}")
+    best_model = best_rf_model
+else:
+    if best_model_name == 'Ridge':
+        best_model = ridge_model
+    elif best_model_name == 'Lasso':
+        best_model = lasso_model
+    else:
+        best_model = model
+
